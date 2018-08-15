@@ -1,0 +1,7 @@
+protocol: https
+netbox: netbox.global.cloud.sap
+configmap: arista_targets.json
+job: arista
+refresh_interval: 1800
+namespace: kube-monitoring
+
