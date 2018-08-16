@@ -2,6 +2,7 @@ import argparse
 from yamlconfig import YamlConfig
 from urllib.request import urlopen
 from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 import logging
 import sys
 import socket
@@ -13,7 +14,7 @@ import time
 
 class discovery(object):
     def __init__(self, config):
-        self._region = os.environ['region'].lower()
+        self._region = config['region']
         self._netbox = config['netbox']
         self._dnssuffix = ".cc.{0}.cloud.sap".format(self._region)
         self.check_region()
@@ -53,9 +54,7 @@ class discovery(object):
         filtered_devices = self.filter_devices(devices=devices)
         return filtered_devices
 
-def get_config():
-    # get the config from the config file
-    myconfig = YamlConfig(args.config)
+def write_configmap(myconfig, devices):
 
     # get the config of the k8s cluster
     try:
@@ -64,39 +63,51 @@ def get_config():
     except IOError:
         config.load_incluster_config()
 
-    myconfig['refresh_interval'] = os.environ['REFRESH_INTERVAL'] or myconfig['refresh_interval']
+    try:
+        api_instance = client.CoreV1Api()
+        config_map = api_instance.read_namespaced_config_map(myconfig['configmap_name'], myconfig['namespace'])
+        config_map.data = {}
+    except client.rest.ApiException as e:
+        logging.error("No configmap received! (%s)", e)
+        exit(1)
+
+    # Write the configmap file
+    labels = {'job': myconfig['job']}
+    result = {'targets': devices, 'labels': labels}
+    configmap = [result]
+
+    config_map.data[myconfig['configmap']] = json.dumps(configmap, indent=2)
+
+    try:
+        response = api_instance.patch_namespaced_config_map(myconfig['configmap_name'], myconfig['namespace'], config_map, pretty=True)
+        logging.debug("Response: %s", response)
+    except client.rest.ApiException as e:
+        logging.error("Exception while updating configmap!(%s)", e)
+        exit(1)
+
+def get_config(configfile):
+    # get the config from the config file
+    config = YamlConfig(configfile)
+    config['refresh_interval'] = os.getenv('REFRESH_INTERVAL', config['refresh_interval'])
     
-    if os.environ['OS_PROM_CONFIGMAP_NAME']:
-        myconfig['configmap_name'] = os.environ['OS_PROM_CONFIGMAP_NAME']
+    if os.getenv('OS_PROM_CONFIGMAP_NAME'):
+        config['configmap_name'] = os.environ['OS_PROM_CONFIGMAP_NAME']
     else:
         logging.error("No configmap name in environment!")
         exit(1)
 
-    try:
-        v1 = client.CoreV1Api()
-        config_map = v1.read_namespaced_config_map(myconfig['configmap_name'], myconfig['namespace'])
-        config_map.data = {}
-        
-    
-    except client.rest.ApiException:
-        logging.error("No configmal received!")
+    if os.getenv('region'):
+        config['region'] = os.environ['region'].lower()
+    else:
+        logging.error("No region in environment!")
         exit(1)
 
-    return myconfig
+    return config
 
-if __name__ == '__main__':
-
-    app_environment = os.environ['APP_ENV'].lower()
-    # command line options
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-c", "--config", help="Specify config yaml file", metavar="FILE", required=False, default="config.yml")
-    args = parser.parse_args()
-
-    myconfig = get_config()
-
+def enable_logging():
     # enable logging
     logger = logging.getLogger()
+    app_environment = os.getenv('APP_ENV', default="production").lower()
     if app_environment == "production":
         logger.setLevel('INFO')
     else:
@@ -104,20 +115,22 @@ if __name__ == '__main__':
     format = '%(asctime)-15s %(process)d %(levelname)s %(filename)s:%(lineno)d %(message)s'
     logging.basicConfig(stream=sys.stdout, format=format)
 
+if __name__ == '__main__':
+
+    # command line options
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-c", "--config", help="Specify config yaml file", metavar="FILE", required=False, default="config.yml")
+    args = parser.parse_args()
+    enable_logging()
+
+    myconfig = get_config(args.config)
+
     mydiscovery = discovery(myconfig)
 
     while True:
         devices = mydiscovery.get_devices()
-
         logging.debug("Devices: %s", devices)
-
-
-        # Write the configmap file
-        labels = {'job': myconfig['job']}
-        result = {'targets': devices, 'labels': labels}
-        configmap = [result]
-
-        with open(myconfig['configmap'], 'w') as outfile:
-            json.dump(configmap, outfile, indent=2)
-    
+        write_configmap(myconfig, devices)
+  
         time.sleep(myconfig['refresh_interval'])
