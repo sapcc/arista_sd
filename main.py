@@ -57,12 +57,14 @@ class discovery(object):
 def write_configmap(myconfig, devices):
 
     # get the config of the k8s cluster
+    # try locally and if not working then from the cluster running in
     try:
         config.load_kube_config()
 
     except IOError:
         config.load_incluster_config()
 
+    # Get the configmap
     try:
         api_instance = client.CoreV1Api()
         config_map = api_instance.read_namespaced_config_map(myconfig['configmap_name'], myconfig['namespace'])
@@ -71,13 +73,14 @@ def write_configmap(myconfig, devices):
         logging.error("No configmap received! (%s)", e)
         exit(1)
 
-    # Write the configmap file
+    # Put the json together
     labels = {'job': myconfig['job']}
     result = {'targets': devices, 'labels': labels}
     configmap = [result]
 
     config_map.data[myconfig['configmap']] = json.dumps(configmap, indent=2)
 
+    # Write the configmap
     try:
         response = api_instance.patch_namespaced_config_map(myconfig['configmap_name'], myconfig['namespace'], config_map, pretty=True)
         logging.debug("Response: %s", response)
@@ -86,10 +89,10 @@ def write_configmap(myconfig, devices):
         exit(1)
 
 def get_config(configfile):
-    # get the config from the config file
+    # get the config from the config file and environment
     config = YamlConfig(configfile)
     config['refresh_interval'] = os.getenv('REFRESH_INTERVAL', config['refresh_interval'])
-    
+
     if os.getenv('OS_PROM_CONFIGMAP_NAME'):
         config['configmap_name'] = os.environ['OS_PROM_CONFIGMAP_NAME']
     else:
@@ -125,7 +128,7 @@ if __name__ == '__main__':
     enable_logging()
 
     myconfig = get_config(args.config)
-
+    logging.debug("Config: %s", myconfig)
     mydiscovery = discovery(myconfig)
 
     while True:
