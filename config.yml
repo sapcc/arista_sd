@@ -1,4 +1,3 @@
-protocol: https
 netbox: netbox.global.cloud.sap
 configmap: arista_targets.json
 job: arista
