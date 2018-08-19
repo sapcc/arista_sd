@@ -1,7 +1,7 @@
 # arista_sd
 
 Custom Prometheus service discovery to get arista switch hostnames of baremetal PODs from [Netbox](https://netbox.readthedocs.io/en/latest/).  
-The targets are written into a configmap.
+The targets are written into a configmap using the Python [Kubernetes Client](https://pypi.org/project/kubernetes/)
 
 ## Prerequisites and Installation
 
@@ -19,7 +19,7 @@ There is also a docker file available to create a docker container to run the ex
 * **configmap** is the name of the configmap file to write to. The actual configmap name has to be passed via environment variable `OS_PROM_CONFIGMAP_NAME`.
 * The **job** parameter specifies the Prometheus job that will be passed as label.
 * The **refresh_interval** (in seconds) can either be specified via config file or via environment variable `REFRESH_INTERVAL`. The environment overwrites the setting in the config file.
-* **namespace** is the Prometheus Name Space
+* **namespace** is the Kubernetes Name Space of Prometheus.
 
 ```text
 netbox: netbox.global.cloud.sap
