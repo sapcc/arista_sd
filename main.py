@@ -30,27 +30,27 @@ class discovery(object):
         name_regex = re.compile(r'%s-asw20\d-bm\d{3}' % (self._region))
         logging.debug("Using filter regex: %s", name_regex)
         logging.info("Devices before: {0}".format(len(devices)))
-        logging.debug("Devices: %s", devices)
 
         selected_devices = [item['name'] + self._dnssuffix for item in devices if re.fullmatch(name_regex, item['name'])]
 
         logging.info("Devices after: {0}".format(len(selected_devices)))
-        logging.debug("Devices: %s", selected_devices)
 
         return selected_devices
 
     def get_devices(self):
-        query_string = "asw20"
+        query_string = "{0}-asw20".format(self._region)
         manufacturer_id = "6"
-
-        netbox_url = "https://{0}/api/dcim/devices/?q={1}&manufacturer_id={2}".format(self._netbox, query_string, manufacturer_id)
-        logging.debug("Netbox URL: %s", netbox_url)
 
         # switch off certificate validation
         ssl._create_default_https_context = ssl._create_unverified_context
 
+        netbox_url = "https://{0}/api/dcim/devices/?q={1}&manufacturer_id={2}".format(self._netbox, query_string, manufacturer_id)
+        logging.debug("Netbox URL: %s", netbox_url)
+
         devices_url = urlopen(netbox_url)
-        devices = json.loads(devices_url.read().decode('utf8'))['results']
+        response = json.loads(devices_url.read().decode('utf8'))
+        logging.debug("Response: %s ", response)
+        devices = response['results']
         logging.info("Devices found: {0}".format(len(devices)))
 
         filtered_devices = self.filter_devices(devices=devices)
