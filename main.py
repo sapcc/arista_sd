@@ -21,7 +21,6 @@ class discovery(object):
 
     def check_region(self):
         region_regex = re.compile(r'[a-z]{2}-[a-z]{2}-\d')
-        logging.debug("Using regex: %s", region_regex)
 
         if not re.fullmatch(region_regex, self._region):
             logging.error("""Region '%s' is not a valid region""", self._region)
@@ -29,12 +28,14 @@ class discovery(object):
 
     def filter_devices(self, devices):
         name_regex = re.compile(r'%s-asw20\d-bm\d{3}' % (self._region))
-        logging.debug("Using regex: %s", name_regex)
+        logging.debug("Using filter regex: %s", name_regex)
         logging.info("Devices before: {0}".format(len(devices)))
+        logging.debug("Devices: %s", devices)
 
-        selected_devices = [item['name']+self._dnssuffix for item in devices if re.fullmatch(name_regex, item['name'])]
+        selected_devices = [item['name'] + self._dnssuffix for item in devices if re.fullmatch(name_regex, item['name'])]
 
-        logging.info("Devices filtered: {0}".format(len(selected_devices)))
+        logging.info("Devices after: {0}".format(len(selected_devices)))
+        logging.debug("Devices: %s", selected_devices)
 
         return selected_devices
 
@@ -43,6 +44,7 @@ class discovery(object):
         manufacturer_id = "6"
 
         netbox_url = "https://{0}/api/dcim/devices/?q={1}&manufacturer_id={2}".format(self._netbox, query_string, manufacturer_id)
+        logging.debug("Netbox URL: %s", netbox_url)
 
         # switch off certificate validation
         ssl._create_default_https_context = ssl._create_unverified_context
