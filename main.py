@@ -28,11 +28,12 @@ class discovery(object):
 
     def filter_devices(self, devices):
         name_regex = re.compile(r'%s-asw20\d-bm\d{3}' % (self._region))
-        logging.debug("Using filter regex: %s", name_regex)
         logging.info("Devices before: {0}".format(len(devices)))
+        logging.debug("Using filter regex: %s", name_regex)
 
         selected_devices = [item['name'] + self._dnssuffix for item in devices if re.fullmatch(name_regex, item['name'])]
-
+        logging.info("Filter bei status active")
+        selected_devices = [item['name'] + self._dnssuffix for item in devices if item['status']['value'] == 1]
         logging.info("Devices after: {0}".format(len(selected_devices)))
 
         return selected_devices
