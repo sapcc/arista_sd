@@ -136,11 +136,11 @@ if __name__ == '__main__':
 
     while True:
         devices = mydiscovery.get_devices()
-        logging.debug("Devices: %s", devices)
 
         if len(devices)==0:
             logging.info("No devices found. Skipping update of configmap.")
         else:
+            logging.info("Devices: %s", devices)
             write_configmap(myconfig, devices)
   
         logging.info("Sleeping for %s seconds ...", myconfig['refresh_interval'])
