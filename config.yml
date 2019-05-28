@@ -2,5 +2,5 @@ netbox: netbox.global.cloud.sap
 configmap: arista_targets.json
 job: 'baremetal/arista'
 refresh_interval: 1800
-namespace: kube-monitoring
+namespace: infra-monitoring
 
