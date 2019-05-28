@@ -102,6 +102,9 @@ def get_config(configfile):
         logging.error("No configmap name in environment!")
         exit(1)
 
+    if os.getenv('NAMESPACE'):
+        config['namespace'] = os.environ['NAMESPACE']
+
     if os.getenv('region'):
         config['region'] = os.environ['region'].lower()
     else:
