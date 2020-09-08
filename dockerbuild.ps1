@@ -1,4 +1,4 @@
-version="v0.1.0"
+$version="v0.1.0"
 
 docker build . -t hub.global.cloud.sap/monsoon/arista-service-discovery:${version}
 docker push hub.global.cloud.sap/monsoon/arista-service-discovery:${version}
